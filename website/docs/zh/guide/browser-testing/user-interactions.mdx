@@ -2,9 +2,27 @@
 
 本指南介绍如何在浏览器模式测试中模拟用户交互。
 
-在浏览器模式下，你可以选择 Testing Library 或原生 DOM API。Testing Library 更贴近真实用户行为，能自动处理完整事件序列与焦点细节，适合大多数 UI 测试；原生 DOM API 更轻量、可精确控制事件属性，但需要手动拼装事件流程，适合验证底层事件逻辑或特殊交互细节。
+在浏览器模式下，你可以根据测试目标选择三种方案：
+
+- **Locator API**：使用 `page.getBy*` + `expect.element` 进行语义化定位和自动等待断言，适合希望以 Locator 风格编写组件/UI 测试的场景
+- **Testing Library**：更贴近真实用户行为，自动处理完整事件序列和焦点管理，适合大多数用户交互测试
+- **原生 DOM API**：更轻量、可精确控制事件属性，但需要手动拼装事件流程，适合验证底层事件逻辑或特殊交互细节
 
 import { PackageManagerTabs } from '@theme';
+
+## Locator API
+
+如果你想用 Playwright 风格的定位与断言来驱动交互测试，请优先参考 [Locator API](/guide/browser-testing/locator-api)。
+
+```ts
+import { page } from '@rstest/browser';
+import { expect, test } from '@rstest/core';
+
+test('checks checkbox by label', async () => {
+  await page.getByLabel('Agree').check();
+  await expect.element(page.getByLabel('Agree')).toBeChecked();
+});
+```
 
 ## Testing Library（推荐）
 

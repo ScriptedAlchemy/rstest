@@ -1,0 +1,140 @@
+---
+title: Assertion
+overviewHeaders: [2, 3]
+---
+
+# Assertion
+
+`expect.element` 是 Browser Mode 中用于 Locator 断言的 API。它接收 `Locator`，返回可链式调用的断言对象。
+
+当你在 Browser Mode 测试里导入 `@rstest/browser`（例如导入 `page`）时，`expect` 会自动具备 `element` 能力。
+
+```ts
+import { page } from '@rstest/browser';
+import { expect, test } from '@rstest/core';
+
+test('checks button state', async () => {
+  await expect
+    .element(page.getByRole('button', { name: 'Save' }))
+    .toBeVisible();
+});
+```
+
+## 类型签名
+
+```ts
+expect.element(locator: Locator): BrowserElementExpect
+```
+
+## 输入约束
+
+- `locator` 必须是 `@rstest/browser` 返回的 `Locator`
+- 在非 Browser Mode 中，`expect.element` 不可用
+
+## not
+
+- **类型：** `BrowserElementExpect`
+
+对后续断言取反。
+
+```ts
+await expect
+  .element(page.getByRole('button', { name: 'Submit' }))
+  .not.toBeDisabled();
+```
+
+## 可见性与状态断言
+
+以下断言都支持可选参数 `options?: { timeout?: number }`：
+
+- `toBeVisible(options?)`
+- `toBeHidden(options?)`
+- `toBeEnabled(options?)`
+- `toBeDisabled(options?)`
+- `toBeChecked(options?)`
+- `toBeUnchecked(options?)`
+- `toBeAttached(options?)`
+- `toBeDetached(options?)`
+- `toBeEditable(options?)`
+- `toBeFocused(options?)`
+- `toBeEmpty(options?)`
+
+## 视口断言
+
+### toBeInViewport
+
+- **类型：** `(options?: { timeout?: number; ratio?: number }) => Promise<void>`
+
+断言元素在视口中。可以通过 `ratio` 指定最小可见比例。
+
+```ts
+await expect.element(page.locator('#hero')).toBeInViewport({ ratio: 0.5 });
+```
+
+## 文本和值断言
+
+以下断言都支持 `string | RegExp` 作为期望值，并支持 `timeout`：
+
+- `toHaveText(text, options?)`
+- `toContainText(text, options?)`
+- `toHaveValue(value, options?)`
+- `toHaveId(value, options?)`
+- `toHaveClass(value, options?)`
+
+```ts
+await expect.element(page.getByText(/Count: \d+/)).toContainText('Count');
+await expect.element(page.getByPlaceholder('Name')).toHaveValue('Alice');
+```
+
+## 属性与结构断言
+
+### toHaveAttribute
+
+- **类型：**
+  - `(name: string, options?: { timeout?: number }) => Promise<void>`
+  - `(name: string, value: string | RegExp, options?: { timeout?: number }) => Promise<void>`
+
+当只传 `name` 时，断言属性存在；传 `name + value` 时，断言属性值匹配。
+
+### toHaveCount
+
+- **类型：** `(count: number, options?: { timeout?: number }) => Promise<void>`
+
+断言 Locator 匹配到的元素数量。
+
+## CSS 与 JS 属性断言
+
+### toHaveCSS
+
+- **类型：** `(name: string, value: string | RegExp, options?: { timeout?: number }) => Promise<void>`
+
+`name` 必须是非空字符串。
+
+### toHaveJSProperty
+
+- **类型：** `(name: string, value: unknown, options?: { timeout?: number }) => Promise<void>`
+
+`name` 必须是非空字符串，`value` 需要是 JSON-serializable。
+
+## 完整示例
+
+```ts
+import { page } from '@rstest/browser';
+import { expect, test } from '@rstest/core';
+
+test('element assertions', async () => {
+  await expect.element(page.getByLabel('Agree')).toBeUnchecked();
+  await page.getByLabel('Agree').check();
+  await expect.element(page.getByLabel('Agree')).toBeChecked();
+
+  await expect
+    .element(page.getByRole('button', { name: 'Save' }))
+    .toHaveAttribute('id', 'save-btn');
+});
+```
+
+## 相关 API
+
+- [Locator](/api/runtime-api/browser-mode/locator)
+- [Page（Locator 入口）](/api/runtime-api/browser-mode/locator#page)
+- [Expect](/api/runtime-api/test-api/expect)

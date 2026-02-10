@@ -1,0 +1,150 @@
+# Locator API
+
+在 Browser Mode 中，Rstest 提供了 Playwright 风格的 Locator API：`page.getBy*` + `expect.element(...)`。
+
+这套 API 的目标是让你在组件测试或 DOM 测试里，依然能用接近 E2E 的元素定位与断言方式，减少在原生 DOM 查询和测试工具之间来回切换的成本。
+
+import { PackageManagerTabs } from '@theme';
+
+## 前置条件
+
+如果你还没完成 Browser Mode 初始化，请先安装核心依赖并安装浏览器驱动：
+
+<PackageManagerTabs command="add @rstest/core @rstest/browser -D" />
+
+```bash
+npx playwright install chromium
+```
+
+其中 [@rstest/core](https://github.com/web-infra-dev/rstest/tree/main/packages/core) 提供测试运行时和 `expect`，[@rstest/browser](https://github.com/web-infra-dev/rstest/tree/main/packages/browser) 提供 `page` 与浏览器侧适配层。
+
+## 快速上手
+
+```ts title="src/locator.test.ts"
+import { page } from '@rstest/browser';
+import { expect, test } from '@rstest/core';
+
+test('interacts with UI by locator', async () => {
+  document.body.innerHTML = `
+    <label for="name">Name</label>
+    <input id="name" placeholder="Name" />
+    <button id="save-btn">Save</button>
+  `;
+
+  await page.getByPlaceholder('Name').fill('Alice');
+  await expect.element(page.getByPlaceholder('Name')).toHaveValue('Alice');
+
+  await expect
+    .element(page.getByRole('button', { name: 'Save' }))
+    .toBeVisible();
+});
+```
+
+运行后，你会得到和测试语义一致的定位/断言输出，而不是只有低层 DOM 失败信息。
+
+## 何时使用 Locator API
+
+- 当你希望测试代码更贴近真实用户操作路径（按 role、label、text 定位）
+- 当你希望断言具备自动等待能力（例如 `toBeVisible`、`toHaveText`）
+- 当你不需要完整引入 E2E 流程，但又希望获得 Playwright 风格体验
+
+如果你的目标是完整用户行为模拟（例如复杂键盘输入序列、clipboard、selection 细节），可以优先考虑 [用户交互](/guide/browser-testing/user-interactions) 中的 Testing Library 方案。
+
+## 查询与组合
+
+你可以像 Playwright 一样组合 Locator：
+
+```ts title="src/locator-query.test.ts"
+import { page } from '@rstest/browser';
+import { expect, test } from '@rstest/core';
+
+test('composes locators', async () => {
+  document.body.innerHTML = `
+    <section>
+      <h2>Home</h2>
+      <button>Save</button>
+    </section>
+    <section>
+      <h2>Profile</h2>
+      <button>Save</button>
+    </section>
+  `;
+
+  const profileSave = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { name: 'Profile' }) })
+    .getByRole('button', { name: 'Save' });
+
+  await expect.element(profileSave).toHaveCount(1);
+});
+```
+
+当前支持的查询/组合能力包括：
+
+- `getByRole`、`getByText`、`getByLabel`、`getByPlaceholder`
+- `getByAltText`、`getByTitle`、`getByTestId`
+- `locator`、`filter({ hasText / has })`
+- `and`、`or`、`nth`、`first`、`last`
+
+## 交互操作
+
+`Locator` 支持常见交互 API，例如：
+
+- `click`、`dblclick`、`hover`、`press`
+- `fill`、`clear`、`focus`、`blur`
+- `check`、`uncheck`、`selectOption`
+- `dispatchEvent`、`setInputFiles`、`waitFor`
+
+```ts title="src/locator-actions.test.ts"
+import { page } from '@rstest/browser';
+import { expect, test } from '@rstest/core';
+
+test('performs actions', async () => {
+  document.body.innerHTML = `
+    <label for="agree">Agree</label>
+    <input id="agree" type="checkbox" />
+  `;
+
+  await page.getByLabel('Agree').check();
+  await expect.element(page.getByLabel('Agree')).toBeChecked();
+});
+```
+
+## 断言能力（expect.element）
+
+Browser Mode 中可以使用 `expect.element(locator)` 对 Locator 做断言：
+
+- 状态断言：`toBeVisible`、`toBeHidden`、`toBeEnabled`、`toBeDisabled`
+- 表单/结构断言：`toBeChecked`、`toBeUnchecked`、`toBeFocused`、`toBeEmpty`
+- 文本和值断言：`toHaveText`、`toContainText`、`toHaveValue`、`toHaveCount`
+- 属性断言：`toHaveId`、`toHaveAttribute`、`toHaveClass`、`toHaveCSS`、`toHaveJSProperty`
+
+你也可以链式使用 `.not` 和可选 `timeout`：
+
+```ts
+await expect
+  .element(page.getByRole('button', { name: 'Save' }))
+  .not.toBeDisabled({ timeout: 1000 });
+```
+
+## 当前能力边界
+
+当前实现是 Playwright Locator API 的一个高频子集，不是完整等价实现。使用时请注意：
+
+- `selectOption` 目前仅支持 `string` 或 `string[]`
+- `setInputFiles` 目前仅支持文件路径 `string` 或 `string[]`
+- `dispatchEvent` 的 `eventInit` 需要是 JSON-serializable
+- `toHaveJSProperty` 的期望值需要是 JSON-serializable
+- screenshot/trace/video 相关能力暂未纳入当前 API 范围
+
+## 示例项目
+
+如果你想直接看一套可运行样例，可参考 [browser-playwright-api](https://github.com/web-infra-dev/rstest/tree/main/examples/browser-playwright-api)。
+
+## 下一步
+
+- [用户交互](/guide/browser-testing/user-interactions) - 根据测试目标选择 Testing Library、Locator API 或原生 DOM API
+- [Locator 参考](/api/runtime-api/browser-mode/locator) - 查看完整 Locator API 列表
+- [Assertion 参考](/api/runtime-api/browser-mode/assertion) - 查看完整断言 API 列表
+- [browser 配置](/config/test/browser) - 查看 Browser Mode 的完整配置项
+- [projects 配置](/config/test/projects) - 在多项目中组合 Browser Mode 与 Node/jsdom 测试

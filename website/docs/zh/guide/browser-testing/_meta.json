@@ -1,1 +1,7 @@
-["index", "getting-started", "framework-guides", "user-interactions"]
+[
+  "index",
+  "getting-started",
+  "locator-api",
+  "framework-guides",
+  "user-interactions"
+]
