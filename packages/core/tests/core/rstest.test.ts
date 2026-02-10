@@ -54,3 +54,47 @@ describe('rstest context', () => {
     expect(rstestContext.projects[1]!.normalizedConfig).toMatchSnapshot();
   });
 });
+
+describe('rstest federation compatibility', () => {
+  it('should allow federation with ESM output in browser mode', () => {
+    expect(() => {
+      new Rstest(
+        {
+          cwd: rootPath,
+          command: 'run',
+          projects: [],
+        },
+        {
+          federation: true,
+          browser: {
+            enabled: true,
+            provider: 'playwright',
+          },
+          output: {
+            module: true,
+          },
+        },
+      );
+    }).not.toThrow();
+  });
+
+  it('should throw when federation uses ESM output in node mode', () => {
+    expect(() => {
+      new Rstest(
+        {
+          cwd: rootPath,
+          command: 'run',
+          projects: [],
+        },
+        {
+          federation: true,
+          output: {
+            module: true,
+          },
+        },
+      );
+    }).toThrow(
+      'Federation compatibility mode for Node tests requires CommonJS output.',
+    );
+  });
+});

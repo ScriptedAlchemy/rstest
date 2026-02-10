@@ -45,13 +45,14 @@ const resolveOutputModule = (
 };
 
 const assertFederationCompatible = (
-  config: Pick<NormalizedConfig, 'federation'>,
+  config: Pick<NormalizedConfig, 'federation' | 'browser'>,
   outputModule: boolean,
 ): void => {
+  if (config.browser.enabled) return;
   if (!config.federation || !outputModule) return;
 
   throw new Error(
-    'Federation requires CommonJS output. Set `output.module: false` in your rstest config ' +
+    'Federation compatibility mode for Node tests requires CommonJS output. Set `output.module: false` in your rstest config ' +
       'when using `federation: true` (note: `RSTEST_OUTPUT_MODULE` can also affect this).',
   );
 };
