@@ -4,6 +4,7 @@ export const BROWSER_PORTS = {
   config: 5184,
   console: 5192,
   error: 5182,
+  federation: 5200,
   isolation: 5188,
   'setup-files': 5190,
   snapshot: 5196,
