@@ -7,6 +7,7 @@
     "start": "pnpm --filter rstest_example_* --parallel start",
     "build": "pnpm --filter rstest_example_* --parallel build",
     "test": "pnpm --filter rstest_example_main-app test && pnpm --filter rstest_example_component-app test",
+    "test:browser": "pnpm --filter ./browser-mode-mf test:browser",
     "e2e:ci": "pnpm build && pnpm exec playwright test --reporter=list"
   },
   "keywords": [],
