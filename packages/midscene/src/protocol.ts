@@ -6,6 +6,7 @@
  * AI RPC methods supported by the host
  */
 export type AiRpcMethod =
+  | 'ai'
   | 'aiTap'
   | 'aiRightClick'
   | 'aiDoubleClick'
@@ -20,13 +21,26 @@ export type AiRpcMethod =
   | 'aiLocate'
   | 'aiBoolean'
   | 'aiNumber'
-  | 'aiString';
+  | 'aiString'
+  | 'aiAsk'
+  | 'runYaml'
+  | 'setAIActContext'
+  | 'evaluateJavaScript'
+  | 'recordToReport'
+  | 'freezePageContext'
+  | 'unfreezePageContext'
+  | '_unstableLogContent';
 
 /**
  * AI RPC request from runner iframe to execute Midscene AI operations.
  */
 export type AiRpcRequest = {
   id: string;
+  /**
+   * Runner instance identifier for stale-request protection.
+   * Generated per iframe load/reload.
+   */
+  runId: string;
   method: AiRpcMethod;
   args: unknown[];
 };

@@ -24,8 +24,18 @@
 // Export AgentProxy for AI-powered testing
 export {
   AgentProxy,
+  type AiActOptions,
+  type AiInputOptions,
+  type AiKeyboardPressOptions,
+  type AiWaitForOptions,
   agent,
+  type LocateActionOptions,
   type LocateResult,
+  type PromptImage,
+  type PromptInput,
+  type QueryOptions,
+  type RecordToReportOptions,
+  type RunYamlResult,
   type ScrollDirection,
   type ScrollOptions,
 } from './agentProxy';

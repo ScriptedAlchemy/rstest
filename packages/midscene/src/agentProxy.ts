@@ -1,254 +1,348 @@
 /**
  * AgentProxy - Browser-side AI Agent API for @rstest/midscene
  *
- * This class provides a Midscene-like Agent API that can be used in browser tests.
- * All AI operations are forwarded to the host (Node.js) side via RPC, where the
- * actual Midscene Agent executes the AI-powered operations.
- *
- * @example
- * ```ts
- * import { agent } from '@rstest/midscene';
- *
- * test('AI-powered test', async () => {
- *   await agent.aiTap('Submit button');
- *   await agent.aiInput('Email input field', 'test@example.com');
- *   await agent.aiAssert('Form was submitted successfully');
- * });
- * ```
+ * All operations are forwarded to the host (Node.js) via plugin RPC, where the
+ * real Midscene Agent instance executes them.
  */
 
 import { sendAiRpcRequest } from './aiRpc';
+import type { AiRpcMethod } from './protocol';
 
-/**
- * Scroll direction options
- */
+export interface PromptImage {
+  name: string;
+  url: string;
+}
+
+export type PromptInput =
+  | string
+  | {
+      prompt: string;
+      images?: PromptImage[];
+      convertHttpImage2Base64?: boolean;
+    };
+
+export interface LocateActionOptions {
+  deepThink?: boolean;
+  xpath?: string;
+  cacheable?: boolean;
+}
+
+export interface QueryOptions {
+  domIncluded?: boolean | 'visible-only';
+  screenshotIncluded?: boolean;
+}
+
 export type ScrollDirection = 'up' | 'down' | 'left' | 'right';
 
-/**
- * Scroll options
- */
-export interface ScrollOptions {
-  direction: ScrollDirection;
-  distance?: number;
-  scrollType?: 'once' | 'untilBottom' | 'untilTop' | 'untilRight' | 'untilLeft';
+export interface ScrollOptions extends LocateActionOptions {
+  scrollType?:
+    | 'singleAction'
+    | 'scrollToBottom'
+    | 'scrollToTop'
+    | 'scrollToRight'
+    | 'scrollToLeft'
+    | 'once'
+    | 'untilBottom'
+    | 'untilTop'
+    | 'untilRight'
+    | 'untilLeft';
+  direction?: ScrollDirection;
+  distance?: number | null;
 }
 
-/**
- * Locate result from aiLocate
- */
+export interface AiActOptions {
+  cacheable?: boolean;
+  deepThink?: 'unset' | boolean;
+  fileChooserAccept?: string | string[];
+}
+
+export interface AiInputOptions extends LocateActionOptions {
+  value: string | number;
+  autoDismissKeyboard?: boolean;
+  mode?: 'replace' | 'clear' | 'typeOnly';
+}
+
+export interface AiKeyboardPressOptions extends LocateActionOptions {
+  keyName: string;
+}
+
+export interface AiWaitForOptions {
+  timeoutMs?: number;
+  checkIntervalMs?: number;
+}
+
+export interface RecordToReportOptions {
+  content?: string;
+}
+
 export interface LocateResult {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  rect?: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  center?: [number, number];
+  scale?: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface RunYamlResult {
+  result: unknown;
 }
 
 /**
- * AgentProxy class that forwards AI operations to the host via RPC.
+ * AgentProxy class that forwards Midscene APIs to the host via RPC.
  */
 export class AgentProxy {
-  /**
-   * AI-powered tap/click on an element described in natural language.
-   *
-   * @param locator - Natural language description of the element to tap
-   * @example
-   * ```ts
-   * await agent.aiTap('Submit button');
-   * await agent.aiTap('The blue "Add to Cart" button');
-   * ```
-   */
-  async aiTap(locator: string): Promise<void> {
-    await sendAiRpcRequest<void>('aiTap', [locator]);
+  private async sendVoid(
+    method: AiRpcMethod,
+    args: unknown[] = [],
+  ): Promise<void> {
+    await sendAiRpcRequest<void>(method, args);
+  }
+
+  /** Alias of aiAct */
+  async ai(prompt: string): Promise<void> {
+    await this.sendVoid('ai', [prompt]);
+  }
+
+  async aiTap(
+    locate: PromptInput,
+    options?: LocateActionOptions,
+  ): Promise<void> {
+    await this.sendVoid(
+      'aiTap',
+      options === undefined ? [locate] : [locate, options],
+    );
+  }
+
+  async aiRightClick(
+    locate: PromptInput,
+    options?: LocateActionOptions,
+  ): Promise<void> {
+    await this.sendVoid(
+      'aiRightClick',
+      options === undefined ? [locate] : [locate, options],
+    );
+  }
+
+  async aiDoubleClick(
+    locate: PromptInput,
+    options?: LocateActionOptions,
+  ): Promise<void> {
+    await this.sendVoid(
+      'aiDoubleClick',
+      options === undefined ? [locate] : [locate, options],
+    );
+  }
+
+  async aiHover(
+    locate: PromptInput,
+    options?: LocateActionOptions,
+  ): Promise<void> {
+    await this.sendVoid(
+      'aiHover',
+      options === undefined ? [locate] : [locate, options],
+    );
   }
 
   /**
-   * AI-powered right-click on an element described in natural language.
-   *
-   * @param locator - Natural language description of the element to right-click
+   * Supports both signatures:
+   * - aiInput(locate, { value, ... })
+   * - aiInput(locate, value, options?)
    */
-  async aiRightClick(locator: string): Promise<void> {
-    await sendAiRpcRequest<void>('aiRightClick', [locator]);
+  async aiInput(
+    ...args:
+      | [locate: PromptInput, opt: AiInputOptions]
+      | [
+          locate: PromptInput,
+          value: string | number,
+          options?: Omit<AiInputOptions, 'value'>,
+        ]
+  ): Promise<void> {
+    if (typeof args[1] === 'object' && args[1] !== null) {
+      await this.sendVoid('aiInput', [args[0], args[1]]);
+      return;
+    }
+
+    const [locate, value, options] = args;
+    const inputOptions: AiInputOptions = {
+      ...(options || {}),
+      value,
+    };
+    await this.sendVoid('aiInput', [locate, inputOptions]);
   }
 
   /**
-   * AI-powered double-click on an element described in natural language.
-   *
-   * @param locator - Natural language description of the element to double-click
+   * Supports both signatures:
+   * - aiKeyboardPress(locate, { keyName, ... })
+   * - aiKeyboardPress(key, locate?, options?)
    */
-  async aiDoubleClick(locator: string): Promise<void> {
-    await sendAiRpcRequest<void>('aiDoubleClick', [locator]);
+  async aiKeyboardPress(
+    ...args:
+      | [locate: PromptInput, opt: AiKeyboardPressOptions]
+      | [
+          key: string,
+          locate?: PromptInput,
+          options?: Omit<AiKeyboardPressOptions, 'keyName'>,
+        ]
+  ): Promise<void> {
+    await this.sendVoid('aiKeyboardPress', args as unknown[]);
   }
 
   /**
-   * AI-powered hover over an element described in natural language.
-   *
-   * @param locator - Natural language description of the element to hover over
+   * Supports both signatures:
+   * - aiScroll(locate, options)
+   * - aiScroll(scrollParam, locate?, options?)
    */
-  async aiHover(locator: string): Promise<void> {
-    await sendAiRpcRequest<void>('aiHover', [locator]);
+  async aiScroll(
+    ...args:
+      | [locate: PromptInput | undefined, opt: ScrollOptions]
+      | [
+          scrollParam: ScrollOptions,
+          locate?: PromptInput,
+          options?: LocateActionOptions,
+        ]
+  ): Promise<void> {
+    await this.sendVoid('aiScroll', args as unknown[]);
   }
 
-  /**
-   * AI-powered input into an element described in natural language.
-   *
-   * @param locator - Natural language description of the input element
-   * @param value - The text value to input
-   * @example
-   * ```ts
-   * await agent.aiInput('Email input field', 'test@example.com');
-   * await agent.aiInput('Search box', 'rstest');
-   * ```
-   */
-  async aiInput(locator: string, value: string): Promise<void> {
-    await sendAiRpcRequest<void>('aiInput', [locator, value]);
+  async aiAct(prompt: string, options?: AiActOptions): Promise<void> {
+    await this.sendVoid(
+      'aiAct',
+      options === undefined ? [prompt] : [prompt, options],
+    );
   }
 
-  /**
-   * AI-powered keyboard key press.
-   *
-   * @param key - The key to press (e.g., 'Enter', 'Tab', 'Escape')
-   */
-  async aiKeyboardPress(key: string): Promise<void> {
-    await sendAiRpcRequest<void>('aiKeyboardPress', [key]);
+  async aiAsk(prompt: PromptInput, options?: QueryOptions): Promise<string> {
+    return sendAiRpcRequest<string>(
+      'aiAsk',
+      options === undefined ? [prompt] : [prompt, options],
+    );
   }
 
-  /**
-   * AI-powered scroll operation.
-   *
-   * @param options - Scroll options including direction and distance
-   */
-  async aiScroll(options: ScrollOptions): Promise<void> {
-    await sendAiRpcRequest<void>('aiScroll', [options]);
+  async aiQuery<T = unknown>(
+    dataDemand: PromptInput,
+    options?: QueryOptions,
+  ): Promise<T> {
+    return sendAiRpcRequest<T>(
+      'aiQuery',
+      options === undefined ? [dataDemand] : [dataDemand, options],
+    );
   }
 
-  /**
-   * Execute a complex AI action described in natural language.
-   * This can chain multiple operations together.
-   *
-   * @param instruction - Natural language instruction describing the action
-   * @example
-   * ```ts
-   * await agent.aiAct('Fill in the login form with email "test@example.com" and password "secret123", then click submit');
-   * ```
-   */
-  async aiAct(instruction: string): Promise<void> {
-    await sendAiRpcRequest<void>('aiAct', [instruction]);
+  async aiAssert(
+    assertion: PromptInput,
+    errorMsgOrOptions?: string | QueryOptions,
+    options?: QueryOptions,
+  ): Promise<void> {
+    if (typeof errorMsgOrOptions === 'string') {
+      await this.sendVoid(
+        'aiAssert',
+        options === undefined
+          ? [assertion, errorMsgOrOptions]
+          : [assertion, errorMsgOrOptions, options],
+      );
+      return;
+    }
+
+    await this.sendVoid(
+      'aiAssert',
+      errorMsgOrOptions === undefined
+        ? [assertion]
+        : [assertion, undefined, errorMsgOrOptions],
+    );
   }
 
-  /**
-   * AI-powered query to extract information from the page.
-   *
-   * @param question - Natural language question about the page content
-   * @returns The extracted information
-   * @example
-   * ```ts
-   * const items = await agent.aiQuery('What items are in the shopping cart?');
-   * ```
-   */
-  async aiQuery<T = unknown>(question: string): Promise<T> {
-    return sendAiRpcRequest<T>('aiQuery', [question]);
-  }
-
-  /**
-   * AI-powered assertion about the page state.
-   * Throws an error if the assertion fails.
-   *
-   * @param assertion - Natural language assertion about the page
-   * @example
-   * ```ts
-   * await agent.aiAssert('The form was submitted successfully');
-   * await agent.aiAssert('Error message is displayed');
-   * ```
-   */
-  async aiAssert(assertion: string): Promise<void> {
-    await sendAiRpcRequest<void>('aiAssert', [assertion]);
-  }
-
-  /**
-   * AI-powered wait for a condition to be met.
-   *
-   * @param condition - Natural language condition to wait for
-   * @param options - Optional timeout configuration
-   * @example
-   * ```ts
-   * await agent.aiWaitFor('Loading spinner disappears');
-   * await agent.aiWaitFor('Results are displayed');
-   * ```
-   */
   async aiWaitFor(
     condition: string,
-    options?: { timeout?: number },
+    options?: AiWaitForOptions,
   ): Promise<void> {
-    await sendAiRpcRequest<void>('aiWaitFor', [condition, options]);
+    await this.sendVoid(
+      'aiWaitFor',
+      options === undefined ? [condition] : [condition, options],
+    );
   }
 
-  /**
-   * AI-powered element location.
-   * Returns the coordinates and dimensions of the located element.
-   *
-   * @param locator - Natural language description of the element to locate
-   * @returns The element's position and dimensions
-   */
-  async aiLocate(locator: string): Promise<LocateResult> {
-    return sendAiRpcRequest<LocateResult>('aiLocate', [locator]);
+  async aiLocate(
+    locate: PromptInput,
+    options?: LocateActionOptions,
+  ): Promise<LocateResult> {
+    return sendAiRpcRequest<LocateResult>(
+      'aiLocate',
+      options === undefined ? [locate] : [locate, options],
+    );
   }
 
-  /**
-   * AI-powered boolean query about the page.
-   *
-   * @param question - Yes/no question about the page
-   * @returns Boolean answer to the question
-   * @example
-   * ```ts
-   * const isLoggedIn = await agent.aiBoolean('Is the user logged in?');
-   * const hasError = await agent.aiBoolean('Is there an error message displayed?');
-   * ```
-   */
-  async aiBoolean(question: string): Promise<boolean> {
-    return sendAiRpcRequest<boolean>('aiBoolean', [question]);
+  async aiBoolean(
+    prompt: PromptInput,
+    options?: QueryOptions,
+  ): Promise<boolean> {
+    return sendAiRpcRequest<boolean>(
+      'aiBoolean',
+      options === undefined ? [prompt] : [prompt, options],
+    );
   }
 
-  /**
-   * AI-powered number extraction from the page.
-   *
-   * @param question - Question asking for a number from the page
-   * @returns The extracted number
-   * @example
-   * ```ts
-   * const itemCount = await agent.aiNumber('How many items are in the cart?');
-   * const price = await agent.aiNumber('What is the total price?');
-   * ```
-   */
-  async aiNumber(question: string): Promise<number> {
-    return sendAiRpcRequest<number>('aiNumber', [question]);
+  async aiNumber(prompt: PromptInput, options?: QueryOptions): Promise<number> {
+    return sendAiRpcRequest<number>(
+      'aiNumber',
+      options === undefined ? [prompt] : [prompt, options],
+    );
   }
 
-  /**
-   * AI-powered string extraction from the page.
-   *
-   * @param question - Question asking for a string from the page
-   * @returns The extracted string
-   * @example
-   * ```ts
-   * const title = await agent.aiString('What is the page title?');
-   * const errorMessage = await agent.aiString('What does the error message say?');
-   * ```
-   */
-  async aiString(question: string): Promise<string> {
-    return sendAiRpcRequest<string>('aiString', [question]);
+  async aiString(prompt: PromptInput, options?: QueryOptions): Promise<string> {
+    return sendAiRpcRequest<string>(
+      'aiString',
+      options === undefined ? [prompt] : [prompt, options],
+    );
+  }
+
+  async runYaml(yamlScriptContent: string): Promise<RunYamlResult> {
+    return sendAiRpcRequest<RunYamlResult>('runYaml', [yamlScriptContent]);
+  }
+
+  async setAIActContext(aiActContext: string): Promise<void> {
+    await this.sendVoid('setAIActContext', [aiActContext]);
+  }
+
+  async evaluateJavaScript(script: string): Promise<unknown> {
+    return sendAiRpcRequest<unknown>('evaluateJavaScript', [script]);
+  }
+
+  async recordToReport(
+    title?: string,
+    options?: RecordToReportOptions,
+  ): Promise<void> {
+    const args: unknown[] = [];
+    if (title !== undefined) {
+      args.push(title);
+    }
+    if (options !== undefined) {
+      if (title === undefined) {
+        args.push(undefined);
+      }
+      args.push(options);
+    }
+    await this.sendVoid('recordToReport', args);
+  }
+
+  async freezePageContext(): Promise<void> {
+    await this.sendVoid('freezePageContext');
+  }
+
+  async unfreezePageContext(): Promise<void> {
+    await this.sendVoid('unfreezePageContext');
+  }
+
+  async _unstableLogContent(): Promise<unknown> {
+    return sendAiRpcRequest<unknown>('_unstableLogContent', []);
   }
 }
 
-/**
- * Default AgentProxy instance for convenient import.
- *
- * @example
- * ```ts
- * import { agent } from '@rstest/midscene';
- *
- * test('my test', async () => {
- *   await agent.aiTap('Submit button');
- * });
- * ```
- */
+/** Default AgentProxy instance for convenient import. */
 export const agent: AgentProxy = new AgentProxy();

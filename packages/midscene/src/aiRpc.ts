@@ -84,6 +84,22 @@ function getTestFile(): string {
 }
 
 /**
+ * Get the current run ID from URL params.
+ * runId changes on each iframe reload and is used for stale-request protection.
+ */
+function getRunId(): string {
+  const url = new URL(window.location.href);
+  const runId = url.searchParams.get('runId');
+  if (!runId) {
+    throw new Error(
+      '@rstest/midscene: Cannot determine runId from URL. ' +
+        'Make sure you are running with a compatible @rstest/browser version.',
+    );
+  }
+  return runId;
+}
+
+/**
  * Send an AI RPC request to the container/host.
  * The container will forward it to the host via WebSocket RPC.
  *
@@ -99,8 +115,9 @@ export function sendAiRpcRequest<T = unknown>(
   initAiRpc();
 
   const id = generateRequestId();
-  const request: AiRpcRequest = { id, method, args };
   const testFile = getTestFile();
+  const runId = getRunId();
+  const request: AiRpcRequest = { id, runId, method, args };
 
   return new Promise<T>((resolve, reject) => {
     pendingRequests.set(id, {
