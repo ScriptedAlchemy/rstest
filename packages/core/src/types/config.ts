@@ -358,9 +358,13 @@ export interface RstestConfig {
   /**
    * Enable Module Federation compatibility mode for Node tests.
    *
-   * When enabled, Rstest will apply some additional defaults to better support
-   * Module Federation runtimes that load chunks via Node fs/vm/eval and/or
-   * HTTP at runtime.
+   * When enabled (for non-browser mode), Rstest will apply additional defaults
+   * to better support Module Federation runtimes executed in Node workers.
+   *
+   * Browser mode keeps browser-native federation behavior and does not enforce
+   * CommonJS output.
+   *
+   * Runtimes in node-mode may still require CommonJS-compatible output.
    *
    * @default false
    */

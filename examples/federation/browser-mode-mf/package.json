@@ -1,0 +1,14 @@
+{
+  "name": "rstest_browser_mode_mf_example",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:browser": "rstest --reporter=verbose"
+  },
+  "devDependencies": {
+    "@module-federation/enhanced": "0.22.0",
+    "@module-federation/rsbuild-plugin": "0.24.1",
+    "@rstest/browser": "workspace:*",
+    "@rstest/core": "workspace:*"
+  }
+}

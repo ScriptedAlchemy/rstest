@@ -240,10 +240,16 @@ export const withDefaultConfig = (config: RstestConfig): NormalizedConfig => {
   merged.setupFiles = castArray(merged.setupFiles);
   merged.globalSetup = castArray(merged.globalSetup);
 
-  // Module Federation (async-node) runs most reliably with CJS output in our
-  // worker VM runtime, because some third-party runtimes evaluate chunks via
-  // vm/eval and rely on a global `__rstest_dynamic_import__` fallback.
-  if (merged.federation && merged.output?.module == null) {
+  const isBrowserMode = merged.browser?.enabled === true;
+
+  // Module Federation compatibility mode for Node/worker execution (async-node)
+  // runs most reliably with CJS output in our VM runtime, because some
+  // third-party runtimes evaluate chunks via vm/eval and rely on a global
+  // `__rstest_dynamic_import__` fallback.
+  //
+  // Do not force CJS in browser mode: browser-native federation should keep
+  // the user's output format.
+  if (merged.federation && !isBrowserMode && merged.output?.module == null) {
     merged.output = { ...(merged.output ?? {}), module: false };
   }
 

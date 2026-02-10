@@ -144,3 +144,34 @@ describe('withDefaultConfig browser validation', () => {
     expect(() => withDefaultConfig(config)).not.toThrow();
   });
 });
+
+describe('withDefaultConfig federation defaults', () => {
+  it('should force CommonJS output in node mode when federation is enabled', () => {
+    const merged = withDefaultConfig({
+      federation: true,
+    });
+
+    expect(merged.output?.module).toBe(false);
+  });
+
+  it('should not force CommonJS output in browser mode when federation is enabled', () => {
+    const merged = withDefaultConfig({
+      federation: true,
+      browser: { enabled: true, provider: 'playwright' },
+    });
+
+    expect(merged.output?.module).toBeUndefined();
+  });
+
+  it('should keep explicit ESM output in browser mode when federation is enabled', () => {
+    const merged = withDefaultConfig({
+      federation: true,
+      browser: { enabled: true, provider: 'playwright' },
+      output: {
+        module: true,
+      },
+    });
+
+    expect(merged.output?.module).toBe(true);
+  });
+});
