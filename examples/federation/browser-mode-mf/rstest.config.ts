@@ -1,4 +1,4 @@
-import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
+import { pluginModuleFederation } from '@module-federation/rsbuild-plugin';
 import { defineConfig } from '@rstest/core';
 
 const PORT = 4010;
@@ -13,26 +13,15 @@ export default defineConfig({
   },
   include: ['tests/**/*.test.ts'],
   testTimeout: 30_000,
-  tools: {
-    rspack: (config) => {
-      config.output ??= {};
-      config.output.publicPath = `http://localhost:${PORT}/`;
-      config.plugins ??= [];
-      config.plugins.push(
-        new ModuleFederationPlugin({
-          name: 'mf_browser_example',
-          filename: 'remoteEntry.js',
-          library: { type: 'var', name: 'mf_browser_example' },
-          remoteType: 'script',
-          exposes: {
-            './Value': './src/remoteValue.ts',
-          },
-          remotes: {
-            mf_remote: `mf_browser_example@http://localhost:${PORT}/remoteEntry.js`,
-          },
-        }),
-      );
-      return config;
-    },
-  },
+  plugins: [
+    pluginModuleFederation({
+      name: 'mf_browser_example',
+      exposes: {
+        './Value': './src/remoteValue.ts',
+      },
+      remotes: {
+        mf_remote: `mf_browser_example@http://localhost:${PORT}/mf-manifest.json`,
+      },
+    }),
+  ],
 });

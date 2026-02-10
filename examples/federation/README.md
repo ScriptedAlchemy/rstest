@@ -26,7 +26,7 @@ It is a pure host.
 
 A minimal Module Federation example for **Rstest browser mode**.
 
-It uses `@module-federation/enhanced` and loads remotes over HTTP in the browser.
+It uses `@module-federation/rsbuild-plugin` (backed by Module Federation tooling) and loads remotes over HTTP in the browser.
 
 # how to use
 

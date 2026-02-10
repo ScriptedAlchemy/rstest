@@ -7,7 +7,7 @@
   },
   "devDependencies": {
     "@module-federation/enhanced": "0.22.0",
-    "@rsbuild/core": "1.7.2",
+    "@module-federation/rsbuild-plugin": "0.24.1",
     "@rstest/browser": "workspace:*",
     "@rstest/core": "workspace:*"
   }

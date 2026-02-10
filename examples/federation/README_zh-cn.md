@@ -24,7 +24,7 @@
 
 一个用于 **Rstest browser mode** 的最小 Module Federation 示例。
 
-它使用 `@module-federation/enhanced`，并在浏览器中通过 HTTP 加载 remotes。
+它使用 `@module-federation/rsbuild-plugin`（基于 Module Federation 工具链），并在浏览器中通过 HTTP 加载 remotes。
 
 # 如何使用
 
